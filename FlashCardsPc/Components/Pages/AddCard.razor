@@ -1,0 +1,43 @@
+﻿@page "/AddCard"
+@inject ICardsService CardsService
+@inject NavigationManager NavigationManager
+<h3>Ajouter une carte</h3>
+
+<div class="mx-auto p-2">
+    <EditForm method="post" OnValidSubmit="Submit" FormName="card-plain-form" Model="Model">
+        <AntiforgeryToken />
+        <DataAnnotationsValidator />
+        <div class="mb-3">
+            <label for="rectoInput">Recto :</label>
+            <InputText class="form-control" @bind-Value="Model.Recto" placeholder="Entrer le recto" autocomplete="off" />
+            <ValidationMessage For="@(() => Model!.Recto)" />
+        </div>
+        <div class="mb-3">
+            <label for="versoInput">Verso :</label>
+            <InputText class="form-control" @bind-Value="Model.Verso" placeholder="Entrer le verso" autocomplete="off" />
+            <ValidationMessage For="@(() => Model!.Verso)" />
+        </div>
+        <div>
+            <button class="btn btn-primary" type="submit">Ajouter la carte</button>
+            <button class="btn btn-danger" @onclick="GoHome">Retour</button>
+        </div>
+    </EditForm>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private Card Model { get; set; } = new();
+
+    private async Task Submit()
+    {
+        Model.Recto.Trim();
+        Model.Verso.Trim();
+        await CardsService.AddCardAsync(Model);
+        Model = new();
+    }
+
+    void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}

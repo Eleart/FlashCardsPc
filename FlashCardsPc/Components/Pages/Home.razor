@@ -1,0 +1,60 @@
+﻿@page "/"
+@inject NavigationManager NavigationManager
+@inject ICardsService CardsService
+
+<h1>Toutes les cartes</h1>
+
+<button class="btn btn-primary" @onclick="AddCard">Ajotuer une carte</button>
+<button class="btn btn-primary" @onclick="TodaysCards">Cartes du jour</button>
+
+<div class="mx-auto p-2">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th scope="col">Recto</th>
+                <th scope="col">Verso</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var card in Cards)
+            {
+                <tr>
+                    <td>@card.Recto</td>
+                    <td>@card.Verso</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="async () => await DeleteAsync(card)">Supprimer</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+
+    </table>
+</div>
+
+@code {
+    private List<Card> Cards { get; set; } = new();
+    protected override async Task OnInitializedAsync()
+    {
+        Cards = await CardsService.GetAllCardsAsync();
+    }
+
+    void AddCard()
+    {
+        NavigationManager.NavigateTo("AddCard");
+    }
+
+    void TodaysCards()
+    {
+        NavigationManager.NavigateTo("TodaysCards");
+    }
+
+    async Task DeleteAsync(Card cardToRemove)
+    {
+        var isDeleted = await CardsService.DeleteCardAsync(cardToRemove.Id);
+        if (isDeleted)
+        {
+            Cards.Remove(cardToRemove);
+        }
+    }
+}

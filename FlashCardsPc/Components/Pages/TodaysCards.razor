@@ -1,0 +1,133 @@
+﻿@page "/TodaysCards"
+@inject ICardsService CardsService
+@inject NavigationManager NavigationManager
+
+<h3>TodaysCards</h3>
+
+@if (@Cards?.Count() > 0)
+{
+    <div class="progress" role="progressbar" aria-label="progress-todays-card" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+        <div class="progress-bar" style="width: @ProgressPercentage%"> @CurrentIndex / @Cards.Count()</div>
+    </div>
+}
+
+@if (string.IsNullOrEmpty(MessageToDisplay))
+{
+    <div>
+        @(CurrentCard.IsRectoSide? CurrentCard.Recto: CurrentCard.Verso)
+    </div>
+
+    <form @onsubmit="async () => await CheckAnswerAsync()">
+        <label for="versoInput">Ta réponse :</label>
+        <InputText class="form-control" @bind-Value="CurrentAnswer" placeholder="Entrer la réponse" autocomplete="off" />
+        <button class="btn btn-primary" type="submit">Répondre</button>
+    </form>
+    <button class="btn btn-danger" @onclick="async () => await IDontKnowAsync()">Je ne sais pas</button>
+}
+else
+{
+    <div>
+        @MessageToDisplay
+        @if (WrongAnswer)
+        {
+            <button class="btn btn-primary" @onclick="NextCard">Suivant</button>
+        }
+    </div>
+}
+<button class="btn btn-danger" @onclick="GoHome">Retour</button>
+
+@code {
+    private Card[] Cards { get; set; }
+    private Card CurrentCard { get; set; } = new();
+
+    private string CurrentAnswer { get; set; } = string.Empty;
+    private string MessageToDisplay { get; set; } = string.Empty;
+    private int CurrentIndex { get; set; }
+    private decimal ProgressPercentage { get; set; }
+    private bool WrongAnswer { get; set; } = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var cards = await CardsService.GetAllTodaysCardsAsync();
+        if (cards.Count == 0)
+        {
+            MessageToDisplay = "Aucune carte trouvée pour aujourd'hui :)";
+        }
+        else
+        {
+            Cards ??= new Card[cards.Count];
+
+            Cards = cards.ToArray();
+            CurrentCard = Cards[CurrentIndex];
+        }
+    }
+
+    async Task CheckAnswerAsync()
+    {
+        var trueResponse = CurrentCard.IsRectoSide ? CurrentCard.Verso : CurrentCard.Recto;
+        if (trueResponse.Trim().Equals(CurrentAnswer.Trim(), StringComparison.CurrentCultureIgnoreCase))
+        {
+            var updateResult = await CardsService.UpdateRightAnswer(CurrentCard);
+            if (updateResult)
+            {
+                GoToTheNextCard();
+            }
+            else
+            {
+                MessageToDisplay = "Erreur pendant l'update de la carte";
+            }
+        }
+        else
+        {
+            var messageToDisplay = $"Mauvaise réponse :( Réponse attendue : {trueResponse} et ta réponse : {CurrentAnswer}";
+            await SetWrongAnswersync(trueResponse, messageToDisplay);
+        }
+    }
+
+    void GoToTheNextCard()
+    {
+        CurrentIndex++;
+        CurrentAnswer = string.Empty;
+        ProgressPercentage = Math.Truncate((((decimal)CurrentIndex / (decimal)Cards.Count()) * 100));
+        if (CurrentIndex > Cards.Count() - 1)
+        {
+            MessageToDisplay = "Plus de carte pour aujourd'hui :)";
+            return;
+        }
+
+        CurrentCard = Cards[CurrentIndex];
+    }
+
+    void NextCard()
+    {
+        WrongAnswer = false;
+        MessageToDisplay = string.Empty;
+        GoToTheNextCard();
+    }
+
+    async Task SetWrongAnswersync(string trueResponse, string message)
+    {
+        WrongAnswer = true;
+        MessageToDisplay = message;
+
+        var updateResult = await CardsService.UpdateWrongAnswer(CurrentCard);
+        if (!updateResult)
+        {
+
+            MessageToDisplay += $"Erreur pendant l'update de la carte";
+        }
+
+    }
+
+    async Task IDontKnowAsync()
+    {
+        var trueResponse = CurrentCard.IsRectoSide ? CurrentCard.Verso : CurrentCard.Recto;
+        var messageToDisplay = $"Mauvaise réponse :( Réponse attendue : {trueResponse}";
+        await SetWrongAnswersync(trueResponse, messageToDisplay);
+    }
+
+    void GoHome()
+    {
+        NavigationManager.NavigateTo("/");
+    }
+}
