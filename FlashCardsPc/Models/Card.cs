@@ -11,6 +11,9 @@ public class Card
     [Required]
     public string Verso { get; set; } = string.Empty;
 
+    public string QuestionForRecto { get; set; } = string.Empty;
+    public string QuestionForVerso { get; set; } = string.Empty;
+
     public DateTime NextAppareance { get; set; }
     public int Strike { get; set; } = 1;
     public bool IsRectoSide { get; set; }
